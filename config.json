@@ -1,0 +1,9 @@
+{
+  "downloads_series": "/mnt/media/Downloads/Series",
+  "downloads_incomplete": "/mnt/media/Downloads/incomplete",
+  "library_series": "/mnt/media/Media/Series",
+  "log_file": "/home/akhomehub/scripts/logs/move_series.log",
+  "jellyfin_url": "http://localhost:8096",
+  "jellyfin_api_key": "",
+  "refresh_jellyfin": true
+}
