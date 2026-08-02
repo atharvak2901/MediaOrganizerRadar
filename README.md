@@ -52,6 +52,8 @@ python3 move_series.py "/mnt/media/Downloads/Series/The.Big.Bang.Theory.S06.1080
 
 It extracts the show name from text before the first season marker. It then searches existing library folders using case-insensitive matching that ignores punctuation and an initial `The`. It does **not** use fuzzy matching: a wrong match is more dangerous than making a new folder.
 
+When a name contains both styles—for example `The Big Bang Theory Season 8 S08 ...`—the importer uses the leftmost marker (`Season 8`), so the show remains `The Big Bang Theory`.
+
 ## Manual newest-folder mode
 
 Use this only when you truly want the newest directory. It searches `Downloads/Series` first and then `Downloads/incomplete`.

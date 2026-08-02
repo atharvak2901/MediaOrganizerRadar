@@ -147,11 +147,15 @@ def prettify(text: str) -> str:
 
 
 def find_marker(name: str) -> re.Match[str] | None:
-    for pattern in SEASON_PATTERNS:
-        match = pattern.search(name)
-        if match:
-            return match
-    return None
+    """Return the *first occurring* supported season marker in a release name.
+
+    A release may contain more than one representation, for example
+    ``The Big Bang Theory Season 8 S08 1080p``.  Selecting by regex-list order
+    would incorrectly choose ``S08`` and leave ``Season 8`` in the show name.
+    Selecting the leftmost match correctly yields ``The Big Bang Theory``.
+    """
+    matches = [match for pattern in SEASON_PATTERNS if (match := pattern.search(name))]
+    return min(matches, key=lambda match: match.start()) if matches else None
 
 
 def parse_release(source: Path) -> Release:
