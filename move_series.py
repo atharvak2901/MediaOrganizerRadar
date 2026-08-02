@@ -126,8 +126,11 @@ def require_below(path: Path, roots: tuple[Path, ...], description: str) -> None
 
 
 def normalise(text: str, *, ignore_leading_the: bool = False) -> str:
-    """Normalise folder/release names for conservative equality matching."""
+    """Normalise names for conservative matching, including ``&``/``and``."""
     text = text.lower()
+    # Treat an ampersand in a library name as the word "and" in a release.
+    # Example: "Key & Peele" matches "Key.and.Peele".
+    text = text.replace("&", " and ")
     text = re.sub(r"[._-]+", " ", text)
     text = re.sub(r"[^a-z0-9 ]", "", text)
     text = re.sub(r"\s+", " ", text).strip()
@@ -253,7 +256,11 @@ def move_contents(release: Release, destination: Path, config: Config, dry_run: 
     extras directories; V1 does not flatten arbitrary internal structures.
     """
     ensure_destination(destination, config, dry_run, logger)
-    if not same_filesystem(release.source, destination):
+    # During a dry run a new season folder deliberately does not exist yet.
+    # The library root always exists (validated by find_show_folder), so it is
+    # the stable mount-point check for both preview and real import.
+    library_root = resolved(config.library_series)
+    if not same_filesystem(release.source, library_root):
         raise ImportErrorSafe(
             "Source and destination are on different filesystems; refusing a "
             "copy-based move. Check that both paths are on the same media disk."
@@ -326,6 +333,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--config", default=DEFAULT_CONFIG, help="Path to config.json (default: %(default)s).")
     parser.add_argument("--latest", action="store_true", help="Manual mode: use newest folder in Downloads/Series, then incomplete.")
     parser.add_argument("--dry-run", action="store_true", help="Log proposed changes without creating or moving anything.")
+    parser.add_argument(
+        "--preflight",
+        action="store_true",
+        help="Validate the full dry-run plan first; move only if that plan succeeds.",
+    )
     parser.add_argument("--no-refresh", action="store_true", help="Do not request a Jellyfin refresh.")
     parser.add_argument("--verbose", action="store_true", help="Show verbose terminal logging.")
     return parser
@@ -339,7 +351,7 @@ def main() -> int:
         config = load_config(resolved(Path(args.config)))
         logger = make_logger(config.log_file, args.verbose)
         logger.info("%s", "=" * 72)
-        logger.info("move_series started | dry_run=%s", args.dry_run)
+        logger.info("move_series started | dry_run=%s preflight=%s", args.dry_run, args.preflight)
         source = resolve_source(args.source, args.latest, config)
         release = parse_release(source)
         logger.info("Source: %s", release.source)
@@ -348,6 +360,15 @@ def main() -> int:
         show_folder = find_show_folder(release, config, logger)
         destination = show_folder / f"Season {release.season}"
         logger.info("Destination: %s", destination)
+        if args.preflight:
+            # This uses exactly the same collision, containment and mount-point
+            # checks as a live import, but never creates or moves anything.
+            logger.info("Preflight started: validating without changing files.")
+            planned = move_contents(release, destination, config, True, logger)
+            logger.info("Preflight passed | would_move=%s would_skip=%s", planned.moved, planned.skipped)
+            if args.dry_run:
+                logger.info("Dry run completed after successful preflight.")
+                return 0
         summary = move_contents(release, destination, config, args.dry_run, logger)
         logger.info("Move summary | moved=%s skipped=%s", summary.moved, summary.skipped)
         if not args.dry_run:

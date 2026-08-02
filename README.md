@@ -68,8 +68,10 @@ Do this only after several successful manual tests.
 In qBittorrent settings, enable **Run external program on torrent completion**, then use:
 
 ```text
-python3 /home/akhomehub/scripts/move-series/move_series.py --config /home/akhomehub/scripts/move-series/config.json "%F"
+python3 /home/akhomehub/scripts/move-series/move_series.py --config /home/akhomehub/scripts/move-series/config.json --preflight "%F"
 ```
+
+`--preflight` first runs the complete dry-run validation in the same process. Only when it succeeds does the script perform the real local move. If validation fails, it exits safely without moving anything.
 
 `%F` must resolve to the completed content **directory**. qBittorrent versions differ, so test it with a small TV release first and inspect `/home/akhomehub/scripts/logs/move_series.log`. Do not enable this for movies or other download categories: V1 is for one TV-season release directory only.
 
